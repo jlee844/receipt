@@ -34,6 +34,7 @@ def latest(cwd: Path | None = None) -> Path | None:
 
 @dataclass
 class Call:
+    index: int               # position in the stream; support must precede a claim
     name: str
     target: str
     ok: bool
@@ -99,7 +100,7 @@ def load(path: Path) -> Session:
             if t == "tool_use":
                 inp = b.get("input") or {}
                 whole = str(inp.get("new_string") or inp.get("content") or "")
-                c = Call(b.get("name") or "?", _target(inp), True,
+                c = Call(idx, b.get("name") or "?", _target(inp), True,
                          whole[:2000], input_chars=len(json.dumps(inp)))
                 pending[b.get("id")] = c
                 s.calls.append(c)

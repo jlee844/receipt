@@ -124,10 +124,14 @@ Exits 1 if any completion claim in the session is unbacked.
 ## Tests
 
 ```bash
-python -m pytest tests/ -q     # 13 tests, no network
+pip install -e ".[dev]" && python -m pytest tests/ -q   # 23 tests, no network
 ```
 
-One of them asserts the receipt never prints a dollar figure without saying a
+Three are regressions for a bug an outside reviewer found in v0.1: support
+for a claim was taken from the session's last 25 calls regardless of position,
+so a later call masked an earlier failure and a transcript with no tool calls
+at all scored every claim `backed`. Another asserts the receipt never prints a
+dollar figure without saying a
 subscription is not billed per token — because the first version did, and a
 $222 number with no context is a charge you never received.
 

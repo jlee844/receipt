@@ -1,6 +1,7 @@
 # I checked 1,135 things an AI agent said it had done
 
-Fifteen weren't true. One had been quietly wrong for four weeks.
+Fifteen needed a human to look at them. Two were flatly false — and one of those
+had been quietly wrong for four weeks.
 
 This is what I found after pointing a checker at my own agent sessions, and the
 five things I tried first that didn't work.
@@ -83,6 +84,7 @@ The second one is answerable by `open()`. Applied to 1,135 completion claims —
 statements like *"the config is done"* or *"all tests pass"*:
 
 ```
+                       count       of 1,135
 backed by a real call    1,112   98.0%
 claimed tests passed        13    1.1%   nothing test-shaped ran
 done by a sub-agent          6    0.5%   invisible from here
@@ -90,7 +92,10 @@ file renamed since           2    0.2%   the work happened, elsewhere
 never happened               2    0.2%   claimed, still missing
 ```
 
-**1,135 claims down to 15 worth a human's attention.** One was an app config
+**1,135 claims down to 15 worth a human's attention** — the 13 that claimed
+passing tests with nothing test-shaped run, plus the 2 that never happened. The
+other 8 non-backed rows are fine: a sub-agent did the work, or a file was
+renamed after the fact. **Only those 2 are outright false**, and one was an app config
 reported as set up which still carried another project's settings and none of
 the ones it claimed. That had been live for four weeks. One filesystem read
 settled what an hour of model judgment couldn't.

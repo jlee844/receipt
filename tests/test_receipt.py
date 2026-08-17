@@ -206,3 +206,82 @@ def test_repeated_opens_are_surfaced(tmp_path):
                                              "new_string": "x"})]))
         rows.append(_msg("user", [_res(f"t{i}")]))
     assert repeated_reads(load(_write(tmp_path, rows))) == [("same.py", 3)]
+
+
+# ── regressions for a shipped bug (found by an outside reviewer) ─────────────
+
+from receipt.claims import NO_SUPPORT   # noqa: E402
+
+
+def test_a_claim_with_no_tool_call_at_all_is_not_backed(tmp_path):
+    """The shipped v0.1 marked these BACKED. A transcript of nothing but
+    'All tests pass. The deploy is live.' with zero tool calls scored 100%
+    backed — so BACKED meant 'no nearby failed write', not evidence."""
+    p = _write(tmp_path, [
+        _msg("assistant", [_text("All tests pass.")]),
+        _msg("assistant", [_text("The deploy is live.")]),
+    ])
+    assert [c.status for c in check(load(p))] == [NO_SUPPORT, NO_SUPPORT]
+
+
+def test_a_later_unrelated_call_cannot_mask_an_earlier_failure(tmp_path):
+    """Support was the session's last N calls regardless of position, so 30
+    later successes buried a failed write that preceded the claim."""
+    missing = tmp_path / "gone.py"
+    rows = [
+        _msg("assistant", [_use("t1", "Write", {"file_path": str(missing),
+                                                "content": "x"})]),
+        _msg("user", [_res("t1", err=True)]),
+        _msg("assistant", [_text("The config is done.")]),
+    ]
+    for i in range(30):
+        rows += [_msg("assistant", [_use(f"u{i}", "Read",
+                                         {"file_path": f"/tmp/x{i}.py"})]),
+                 _msg("user", [_res(f"u{i}")])]
+    [c] = check(load(_write(tmp_path, rows)))
+    assert c.status == UNBACKED
+
+
+def test_support_never_includes_calls_made_after_the_claim(tmp_path):
+    """The invariant behind both bugs above."""
+    f = tmp_path / "a.py"
+    f.write_text("x", encoding="utf-8")
+    p = _write(tmp_path, [
+        _msg("assistant", [_text("Everything is done.")]),
+        _msg("assistant", [_use("t1", "Write", {"file_path": str(f),
+                                                "content": "x"})]),
+        _msg("user", [_res("t1")]),
+    ])
+    assert [c.status for c in check(load(p))] == [NO_SUPPORT]
+
+
+def test_a_test_claim_with_no_test_run_is_flagged(tmp_path):
+    """The published breakdown has an 'unverified_tests' row; v0.1 could not
+    actually produce it — the constant was defined and never assigned."""
+    p = _write(tmp_path, [
+        _msg("assistant", [_use("t1", "Bash", {"command": "ls -la"})]),
+        _msg("user", [_res("t1")]),
+        _msg("assistant", [_text("All 11 backend tests pass.")]),
+    ])
+    from receipt.claims import UNVERIFIED_TESTS
+    assert [c.status for c in check(load(p))] == [UNVERIFIED_TESTS]
+
+
+def test_a_hand_rolled_harness_counts_as_running_tests(tmp_path):
+    p = _write(tmp_path, [
+        _msg("assistant", [_use("t1", "Bash",
+                                {"command": "python3 -c 'import tests.test_x'"})]),
+        _msg("user", [_res("t1")]),
+        _msg("assistant", [_text("All 11 backend tests pass.")]),
+    ])
+    assert [c.status for c in check(load(p))] == [BACKED]
+
+
+def test_subagent_work_is_uncheckable_not_a_failure(tmp_path):
+    p = _write(tmp_path, [
+        _msg("assistant", [_use("t1", "Agent", {"command": "run the suite"})]),
+        _msg("user", [_res("t1")]),
+        _msg("assistant", [_text("All 436 tests passed.")]),
+    ])
+    from receipt.claims import DELEGATED
+    assert [c.status for c in check(load(p))] == [DELEGATED]

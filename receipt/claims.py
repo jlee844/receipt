@@ -28,8 +28,17 @@ _NARRATION = re.compile(r"^\s*(now|next|let me|i'?ll|then|first|adding|building|
                         r"writing|checking|running|starting)\b", re.I)
 _SENT = re.compile(r"(?<=[.!?])\s+|\n+")
 
-BACKED, UNBACKED, MOVED, UNVERIFIED_TESTS = (
-    "backed", "unbacked", "moved", "unverified_tests")
+BACKED, UNBACKED, MOVED, NO_SUPPORT = (
+    "backed", "unbacked", "moved", "no_support")
+UNVERIFIED_TESTS, DELEGATED = "unverified_tests", "delegated"
+
+# "Did anything test-shaped run" — not "did pytest run". Tests get executed by
+# hand-rolled harnesses often enough that a runner-only pattern reports them as
+# unverified.
+_TEST_CMD = re.compile(r"\b(pytest|jest|vitest|go test|cargo test|npm (run )?test|"
+                       r"unittest|tox|rspec)\b|test_[\w-]+\.\w+|"
+                       r"[\w-]+_test\.\w+|\btests?[/.]|\btest_[\w-]+", re.I)
+_MENTIONS_TESTS = re.compile(r"\btests?\b", re.I)
 
 
 @dataclass
@@ -66,11 +75,32 @@ def _relocated(missing: Path, attempted: str) -> str | None:
 def check(session: Session, lookback: int = 25) -> list[ClaimCheck]:
     out: list[ClaimCheck] = []
     for idx, text in session.prose:
-        support = [c for c in session.calls][-lookback:] if session.calls else []
+        # Support must PRECEDE the claim. Taking the session's last N calls
+        # regardless of position means a later unrelated call masks an earlier
+        # failure, and a transcript with no calls at all scores every claim
+        # "backed" — which is not evidence of anything.
+        support = [c for c in session.calls if c.index <= idx][-lookback:]
         for raw in _SENT.split(text):
             s = " ".join(raw.split())
             if not s or len(s) > 400 or _NARRATION.match(s) or not _CLAIM.search(s):
                 continue
+            if not support:
+                out.append(ClaimCheck(s[:200], NO_SUPPORT,
+                                      "no tool call precedes this claim"))
+                continue
+
+            # A claim about tests needs something test-shaped to have run.
+            if _MENTIONS_TESTS.search(s):
+                ran = [c for c in support if _TEST_CMD.search(c.target)]
+                if not ran:
+                    if any(c.name == "Agent" for c in support):
+                        out.append(ClaimCheck(s[:200], DELEGATED,
+                                              "a subagent did this; not visible here"))
+                    else:
+                        out.append(ClaimCheck(
+                            s[:200], UNVERIFIED_TESTS,
+                            "claims tests pass; nothing test-shaped ran"))
+                    continue
             bad = _failed_writes(support)
             if not bad:
                 out.append(ClaimCheck(s[:200], BACKED))

@@ -5,6 +5,9 @@ description = "What did that AI coding session actually do, and what did it cost
 requires-python = ">=3.10"
 dependencies = []
 
+[project.optional-dependencies]
+dev = ["pytest"]
+
 [project.scripts]
 receipt = "receipt.__main__:main"
 
