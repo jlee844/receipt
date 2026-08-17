@@ -357,3 +357,16 @@ def test_dashboard_never_prints_a_bare_dollar_figure():
     from receipt.dashboard import PAGE
     assert "at API list prices" in PAGE
     assert "not billed" in PAGE
+
+
+def test_the_context_report_does_not_call_itself_waste(tmp_path):
+    """The tool knows tokens and turns, not whether they were worth it. The
+    largest entry is often the work — screenshots in a session verifying a UI."""
+    from receipt.waste import render as render_context
+    rows = [_msg("assistant", [_use("t0", "Read", {"file_path": "/a/b.py"})]),
+            {"message": {"role": "user", "content": [
+                {"type": "tool_result", "tool_use_id": "t0", "content": "x" * 40_000}]}}]
+    out = render_context(load(_write(tmp_path, rows)))
+    assert "WHERE THE CONTEXT WENT" in out
+    assert "is not a mistake" in out
+    assert "waste" not in out.lower()

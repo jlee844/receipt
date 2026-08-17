@@ -21,8 +21,9 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="receipt")
     ap.add_argument("--session", default=None, help="path to a transcript")
     ap.add_argument("--cwd", default=".", help="project dir to find a session for")
-    ap.add_argument("--waste", action="store_true",
-                    help="show where the context went and what it cost to carry")
+    ap.add_argument("--context", "--waste", dest="context", action="store_true",
+                    help="where the context went and what it cost to carry "
+                         "(--waste is kept as an alias)")
     ap.add_argument("--dashboard", action="store_true",
                     help="serve a live page showing every running session")
     ap.add_argument("--port", type=int, default=8974)
@@ -75,7 +76,7 @@ def main(argv: list[str] | None = None) -> int:
         print()
     else:
         print(render(r))
-        if a.waste:
+        if a.context:
             print(render_waste(r.session))
     return 1 if (a.fail_on_unbacked and r.unbacked) else 0
 

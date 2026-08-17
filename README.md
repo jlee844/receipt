@@ -88,7 +88,7 @@ for four weeks.
 ## Where the context went
 
 ```bash
-receipt --waste
+receipt --context        # --waste still works
 ```
 
 ```
@@ -106,6 +106,12 @@ receipt --waste
 that a large result costs you once when it arrives and *again on every later
 turn*, because it sits in context being re-read. A 100 KB image read at turn 40
 of 440 is far more expensive than the same image at turn 430.
+
+**This is not a waste report.** The tool knows tokens and turns; it does not
+know whether they were worth it. The largest entry is often the work itself —
+screenshots dominate a session that was verifying an iOS build, and that is the
+job, not a defect. Position is the actionable part: the same screenshot costs
+less taken later.
 
     carried  =  tokens  x  turns it stayed in context
 
@@ -148,7 +154,7 @@ Exits 1 if any completion claim in the session is unbacked.
 ## Tests
 
 ```bash
-pip install -e ".[dev]" && python -m pytest tests/ -q   # 32 tests, no network
+pip install -e ".[dev]" && python -m pytest tests/ -q   # 33 tests, no network
 ```
 
 Three are regressions for a bug an outside reviewer found in v0.1: support

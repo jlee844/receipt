@@ -221,10 +221,10 @@ function detail(){
     <div class=panel><h2>Most-touched files</h2>
       <table>${s.topfiles.map(t=>`<tr><td>${esc(t.f)}</td><td>${t.n}x</td></tr>`).join('')
         || '<tr><td class=none>none</td></tr>'}</table></div>
-    <div class=panel><h2>What cost the most to carry</h2>
+    <div class=panel><h2>Where the context went</h2>
       <table>${s.waste.map(w=>`<tr><td>${esc(w.w)}</td><td>${f(w.c)}</td></tr>`).join('')
         || '<tr><td class=none>nothing large</td></tr>'}</table>
-      <p class=none style="margin-top:.5rem">tokens × turns they stayed in context</p></div>
+      <p class=none style="margin-top:.5rem">tokens × turns in context. A large entry is not a mistake — screenshots dominate a session that was verifying a UI, and that is the work.</p></div>
    </div>`;
 }
 async function tick(){

@@ -1,5 +1,15 @@
 """Where the context went, and what it cost to carry.
 
+NOT a waste report, despite what the first version of this file was called.
+The tool knows tokens and turns. It does not know whether they were worth it —
+and the largest entry is often the work itself. Screenshots dominate a session
+that was verifying an iOS build; that is the job, not a defect. Reporting
+"waste" is a judgement about intent, which is exactly the class of claim this
+project spent a week establishing that a tool cannot make.
+
+What it can say is where the context went, and that position matters as much
+as size.
+
 The obvious metric — which tool result was biggest — is the wrong one. A large
 result costs you once when it arrives and then *again on every later turn*,
 because it sits in the context being re-read. So a 50 KB file read at turn 10
@@ -72,7 +82,9 @@ def render(session: Session) -> str:
     L = ["", "    WHERE THE CONTEXT WENT", "",
          "      carried = tokens x turns they stayed in context",
          "      an estimate, not a bill: compaction drops earlier turns, and",
-         "      images are counted from their encoded size, not by dimensions", ""]
+         "      images are counted from their encoded size, not by dimensions",
+         "      a large entry is not a mistake — screenshots dominate a session",
+         "      that was verifying a UI, and that is the work", ""]
     if items:
         L.append(f"      {'what':<46}{'tokens':>9}{'at turn':>9}{'carried':>12}")
         for it in items:
