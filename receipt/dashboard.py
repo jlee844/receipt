@@ -24,6 +24,51 @@ def _waste(session) -> list:
         return []
 
 
+def _plan(path: Path) -> dict:
+    """Self-reported plan state, if the session recorded any.
+
+    Reported as-is and labelled self-reported, because it is not reliable:
+    in a real session 14 of 15 tasks read "pending" while the first one's own
+    description ended "DONE." Nothing updates that state when work lands, so
+    showing it as progress would show something false.
+    """
+    tasks: dict[str, dict] = {}
+    order: list[str] = []
+    try:
+        for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+            if "Task" not in line:
+                continue
+            try:
+                rec = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            c = (rec.get("message") or {}).get("content")
+            if not isinstance(c, list):
+                continue
+            for b in c:
+                if not isinstance(b, dict) or b.get("type") != "tool_use":
+                    continue
+                inp = b.get("input") or {}
+                if b.get("name") not in ("TaskCreate", "TaskUpdate"):
+                    continue
+                for t in (inp.get("tasks") or [inp]):
+                    tid = t.get("taskId") or t.get("id")
+                    desc = t.get("description") or t.get("content") or ""
+                    if b.get("name") == "TaskCreate":
+                        tid = tid or f"t{len(tasks)}"
+                        tasks[tid] = {"desc": desc, "state": t.get("state") or "pending"}
+                        order.append(tid)
+                    elif tid in tasks and t.get("state"):
+                        tasks[tid]["state"] = t["state"]
+    except OSError:
+        return {"items": [], "stale": False}
+    items = [{"d": tasks[i]["desc"][:120], "s": tasks[i]["state"]} for i in order]
+    # A description that says it is done while the state says otherwise is the
+    # signal that this state is not maintained.
+    stale = any(x["s"] != "completed" and "DONE" in x["d"].upper() for x in items)
+    return {"items": items[:12], "stale": stale}
+
+
 def _last_asks(path: Path, n: int = 3) -> list[str]:
     """The last few things the human actually typed — the fastest way to know
     what a session is for without opening it."""
@@ -111,7 +156,7 @@ def snapshot() -> list[dict]:
                              for k, v in list(r.session.files_touched.items())[:12]],
                 "waste": [{"w": i.label, "t": i.tokens, "turn": i.turn,
                            "c": i.carry_tokens} for i in _waste(r.session)],
-                "asked": _last_asks(path),
+                "asked": _last_asks(path), "plan": _plan(path),
                 "in_tok": c.input_tokens, "cw_tok": c.cache_write,
                 "cr_tok": c.cache_read, "size_mb": round(path.stat().st_size / 1e6, 1),
             }
@@ -177,9 +222,14 @@ td:last-child{text-align:right;color:var(--mut);white-space:nowrap}
 <div id=body></div>
 <script>
 const f=n=>(n||0).toLocaleString();
-let DATA=[], SEL=null;
+let DATA=[], SEL='__all__';
 function tabs(){
-  document.getElementById('tabs').innerHTML = DATA.map(s=>`
+  const tot = DATA.reduce((a,s)=>a+s.unbacked,0);
+  document.getElementById('tabs').innerHTML =
+    `<button data-id="__all__" class="${SEL==='__all__'?'on':''}">
+       <i class="dot ${tot?'warn':''}"></i>All sessions
+       <small>${DATA.length} live${tot?` · ${tot} to check`:''}</small></button>` +
+    DATA.map(s=>`
     <button data-id="${s.id}" class="${s.id===SEL?'on':''}">
       <i class="dot ${s.unbacked?'warn':''}"></i>${s.id}
       <small>${s.cwd.split('/').pop()||'~'} · $${s.usd.toFixed(0)}</small>
@@ -187,7 +237,39 @@ function tabs(){
   document.querySelectorAll('nav button').forEach(b=>
     b.onclick=()=>{SEL=b.dataset.id;tabs();detail();});
 }
+function overview(){
+  const esc = t => (t||'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+  const tot = DATA.reduce((a,s)=>a+s.unbacked,0);
+  const flagged = DATA.filter(s=>s.unbacked);
+  return `
+   <div class=panel style="margin-bottom:1.1rem">
+     <h2>Guard — claims nothing on disk backs</h2>
+     ${tot? flagged.map(s=>`
+       <div style="margin-bottom:.9rem">
+         <div class=row><span>${s.id} · ${esc(s.cwd.split('/').pop())}</span>
+           <b class=warn>${s.unbacked}</b></div>
+         ${s.problems.slice(0,3).map(p=>
+           `<div class=prob><b>${esc(p.s)}</b><span>${esc(p.d)}</span></div>`).join('')}
+       </div>`).join('')
+       : '<p class=none>Every completion claim across all sessions is backed by a call that succeeded.</p>'}
+   </div>
+   <div class=cols>
+     ${DATA.map(s=>`
+     <div class=panel>
+       <div class=hd><span class=sid>${s.id}</span>
+         <span class=pid>${esc(s.cwd.split('/').pop()||'~')}</span></div>
+       ${s.asked.length?`<p class=ask style="border:0;padding-top:0">${esc(s.asked[s.asked.length-1])}</p>`:''}
+       <div class=row><span>claims backed</span><b class="${s.unbacked?'warn':''}">${s.backed} / ${s.claims}</b></div>
+       <div class="bar"><i style="width:${s.claims?100*s.backed/s.claims:100}%"></i></div>
+       <div class=row style="margin-top:.5rem"><span>files changed</span><b>${s.files}</b></div>
+       <div class=row><span>test runs</span><b>${s.tests}</b></div>
+       <div class=row><span>plan recorded</span><b>${s.plan.items.length||'—'}${s.plan.stale?' (stale)':''}</b></div>
+       <div class=row><span>at API list</span><b>$${s.usd.toFixed(2)}</b></div>
+     </div>`).join('')}
+   </div>`;
+}
 function detail(){
+  if(SEL==='__all__'){ document.getElementById('body').innerHTML = overview(); return }
   const s = DATA.find(x=>x.id===SEL); if(!s) return;
   const esc = t => (t||'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
   document.getElementById('body').innerHTML = `
@@ -218,6 +300,12 @@ function detail(){
       <p class=none style="margin-top:.4rem">A Claude Code subscription is not billed
       per token — this is what the same work would cost through the API.</p>
     </div>
+    <div class=panel><h2>Plan, as the session recorded it</h2>
+      ${s.plan.items.length? (s.plan.stale?
+        '<p class=none style="margin-bottom:.6rem">⚠ self-reported and not maintained — an item still marked pending describes itself as done. Treat as a list of intents, not progress.</p>':'')
+        + s.plan.items.map(i=>`<div class=prob style="border-bottom:1px solid var(--soft)"><b style="color:var(--mut)">[${esc(i.s)}]</b><span>${esc(i.d)}</span></div>`).join('')
+        : '<p class=none>No plan recorded. Progress below is measured from what actually happened.</p>'}
+    </div>
     <div class=panel><h2>Most-touched files</h2>
       <table>${s.topfiles.map(t=>`<tr><td>${esc(t.f)}</td><td>${t.n}x</td></tr>`).join('')
         || '<tr><td class=none>none</td></tr>'}</table></div>
@@ -231,7 +319,7 @@ async function tick(){
   try{ DATA = await (await fetch('/data')).json() }catch(e){ return }
   document.getElementById('age').textContent = new Date().toLocaleTimeString();
   if(!DATA.length){ document.getElementById('body').innerHTML='<p class=none>No live sessions.</p>'; return }
-  if(!DATA.find(x=>x.id===SEL)) SEL = DATA[0].id;
+  if(SEL!=='__all__' && !DATA.find(x=>x.id===SEL)) SEL='__all__';
   tabs(); detail();
 }
 tick(); setInterval(tick, 4000);

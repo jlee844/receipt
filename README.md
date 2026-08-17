@@ -63,7 +63,9 @@ flags, no collisions.
 receipt --dashboard      # http://127.0.0.1:8974
 ```
 
-One page, a tab per live session, refreshing every few seconds. Each tab shows
+One page. The first tab is **All sessions** — every completion claim across
+every running session that nothing on disk backs, in one list. That is the
+guard. Then a tab per session, refreshing every few seconds. Each tab shows
 what that session is working on (the last things you actually typed), its
 activity, every claim checked against disk with the unbacked ones quoted, the
 token split, its most-touched files, and what cost the most to carry.
@@ -154,7 +156,7 @@ Exits 1 if any completion claim in the session is unbacked.
 ## Tests
 
 ```bash
-pip install -e ".[dev]" && python -m pytest tests/ -q   # 33 tests, no network
+pip install -e ".[dev]" && python -m pytest tests/ -q   # 36 tests, no network
 ```
 
 Three are regressions for a bug an outside reviewer found in v0.1: support

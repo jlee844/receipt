@@ -370,3 +370,29 @@ def test_the_context_report_does_not_call_itself_waste(tmp_path):
     assert "WHERE THE CONTEXT WENT" in out
     assert "is not a mistake" in out
     assert "waste" not in out.lower()
+
+
+def test_recorded_plan_state_is_flagged_when_it_contradicts_itself(tmp_path):
+    """A task still marked pending whose own description says DONE means the
+    state is not maintained. Rendering it as progress would show something
+    false, so it is labelled self-reported instead."""
+    from receipt.dashboard import _plan
+    rows = [_msg("assistant", [_use("t1", "TaskCreate", {"tasks": [
+        {"taskId": "a", "description": "Port the list types to mobile. DONE.",
+         "state": "pending"}]})])]
+    p = _write(tmp_path, rows)
+    plan = _plan(p)
+    assert plan["items"] and plan["stale"] is True
+
+
+def test_a_maintained_plan_is_not_flagged_stale(tmp_path):
+    from receipt.dashboard import _plan
+    rows = [_msg("assistant", [_use("t1", "TaskCreate", {"tasks": [
+        {"taskId": "a", "description": "Port the list types", "state": "pending"}]})])]
+    assert _plan(_write(tmp_path, rows))["stale"] is False
+
+
+def test_no_plan_recorded_is_not_an_error(tmp_path):
+    from receipt.dashboard import _plan
+    p = _write(tmp_path, [_msg("assistant", [_text("Done.")])])
+    assert _plan(p) == {"items": [], "stale": False}
