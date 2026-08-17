@@ -124,7 +124,7 @@ Exits 1 if any completion claim in the session is unbacked.
 ## Tests
 
 ```bash
-pip install -e ".[dev]" && python -m pytest tests/ -q   # 23 tests, no network
+pip install -e ".[dev]" && python -m pytest tests/ -q   # 25 tests, no network
 ```
 
 Three are regressions for a bug an outside reviewer found in v0.1: support

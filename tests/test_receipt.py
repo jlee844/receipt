@@ -285,3 +285,20 @@ def test_subagent_work_is_uncheckable_not_a_failure(tmp_path):
     ])
     from receipt.claims import DELEGATED
     assert [c.status for c in check(load(p))] == [DELEGATED]
+
+
+def test_the_fallback_to_another_project_is_stated_not_silent(tmp_path):
+    """Run outside a project, receipt used to report a DIFFERENT project's
+    session with nothing on screen saying so."""
+    p = _write(tmp_path, [_msg("assistant", [_text("Done.")],
+                               usage={"output_tokens": 10}, model="claude-opus-5")])
+    s = load(p)
+    s.matched_cwd = False
+    out = render(build(s))
+    assert "no session for this directory" in out
+
+
+def test_a_matched_session_shows_no_warning(tmp_path):
+    p = _write(tmp_path, [_msg("assistant", [_text("Done.")],
+                               usage={"output_tokens": 10}, model="claude-opus-5")])
+    assert "no session for this directory" not in render(build(load(p)))

@@ -43,7 +43,11 @@ def render(r: Receipt) -> str:
     fails = s.failures
     backed = sum(1 for x in r.claims if x.status == BACKED)
 
-    L = ["", f"  RECEIPT  {s.session_id[:8]}", ""]
+    L = ["", f"  RECEIPT  {s.session_id[:8]}"]
+    if not s.matched_cwd:
+        L.append(f"  ⚠ no session for this directory — showing the most recent")
+        L.append(f"    one found:  {s.path.parent.name}")
+    L.append("")
     L.append(f"    you asked                {s.user_turns} times")
     L.append(f"    tool calls               {_n(len(s.calls))}")
     L.append(f"    files changed            {len(files)}")

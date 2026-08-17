@@ -28,12 +28,17 @@ def main(argv: list[str] | None = None) -> int:
                     help="exit 1 if any completion claim is unbacked")
     a = ap.parse_args(argv)
 
-    path = Path(a.session) if a.session else latest(Path(a.cwd))
+    if a.session:
+        path, matched = Path(a.session), True
+    else:
+        path, matched = latest(Path(a.cwd))
     if not path or not path.exists():
         print("  no session transcript found")
         return 0
 
-    r = build(load(path))
+    session = load(path)
+    session.matched_cwd = matched
+    r = build(session)
     if a.json:
         json.dump({"session": r.session.session_id,
                    "files_changed": r.session.files_touched,

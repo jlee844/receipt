@@ -17,19 +17,27 @@ def slug(cwd: Path) -> str:
     return "-" + str(cwd.resolve()).replace("/", "-").lstrip("-")
 
 
-def latest(cwd: Path | None = None) -> Path | None:
-    """Most recently modified transcript, preferring this working directory."""
+def latest(cwd: Path | None = None) -> tuple[Path | None, bool]:
+    """Most recent transcript for `cwd`, else the most recent anywhere.
+
+    Returns (path, matched_cwd). The fallback used to be silent, so running
+    this outside a project reported another project's work with nothing on
+    screen saying so.
+    """
     if not PROJECTS.exists():
-        return None
+        return None, False
+    matched = True
     candidates: list[Path] = []
     if cwd:
         d = PROJECTS / slug(cwd)
         if d.exists():
-            candidates = list(d.glob("*.jsonl"))
+            candidates = [p for p in d.glob("*.jsonl") if p.stat().st_size > 2000]
     if not candidates:
-        candidates = list(PROJECTS.glob("*/*.jsonl"))
-    real = [p for p in candidates if p.stat().st_size > 2000]
-    return max(real, key=lambda p: p.stat().st_mtime) if real else None
+        matched = False
+        candidates = [p for p in PROJECTS.glob("*/*.jsonl") if p.stat().st_size > 2000]
+    if not candidates:
+        return None, False
+    return max(candidates, key=lambda p: p.stat().st_mtime), matched
 
 
 @dataclass
@@ -47,6 +55,7 @@ class Call:
 class Session:
     path: Path
     session_id: str
+    matched_cwd: bool = True   # False when we fell back to any project
     calls: list[Call] = field(default_factory=list)
     prose: list[tuple[int, str]] = field(default_factory=list)
     usage: list[tuple[str, dict]] = field(default_factory=list)
