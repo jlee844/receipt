@@ -13,7 +13,9 @@ the tokens went.
 No dependencies. Nothing leaves your machine.
 
 ```bash
-pip install agent-receipt
+git clone https://github.com/jlee844/receipt && cd receipt
+pip install -e .
+
 receipt                    # latest session for this directory
 receipt --json
 ```
@@ -128,3 +130,7 @@ python -m pytest tests/ -q     # 13 tests, no network
 One of them asserts the receipt never prints a dollar figure without saying a
 subscription is not billed per token — because the first version did, and a
 $222 number with no context is a charge you never received.
+
+## Status
+
+Not on PyPI yet — install from source as above. Python 3.10+.
