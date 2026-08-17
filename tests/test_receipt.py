@@ -14,6 +14,7 @@ from receipt.session import load                                # noqa: E402
 
 
 def _write(tmp_path, rows):
+    tmp_path.mkdir(parents=True, exist_ok=True)
     p = tmp_path / "s.jsonl"
     with p.open("w", encoding="utf-8") as fh:
         for r in rows:
@@ -156,3 +157,52 @@ def test_the_receipt_never_invents_a_bill(tmp_path):
     out = render(build(load(p)))
     assert "at API list prices" in out
     assert "not billed per token" in out
+
+
+# ── waste ────────────────────────────────────────────────────────────────────
+
+from receipt.waste import profile, repeated_reads   # noqa: E402
+
+
+def _big(tmp_path, n_calls, big_at, big_chars=40_000):
+    rows = []
+    for i in range(n_calls):
+        rows.append(_msg("assistant", [_use(f"t{i}", "Read",
+                                            {"file_path": f"/a/f{i}.py"})]))
+        size = big_chars if i == big_at else 100
+        rows.append({"message": {"role": "user", "content": [
+            {"type": "tool_result", "tool_use_id": f"t{i}", "content": "x" * size}]}})
+    return _write(tmp_path, rows)
+
+
+def test_cost_is_size_times_how_long_it_stayed_in_context(tmp_path):
+    """The same read early costs far more than late — it is re-read on every
+    later turn. Ranking by raw size alone misses this entirely."""
+    early = profile(load(_big(tmp_path / "e", 40, big_at=2)), top=1)[0]
+    late = profile(load(_big(tmp_path / "l", 40, big_at=37)), top=1)[0]
+    assert early.tokens == late.tokens
+    assert early.carry_tokens > late.carry_tokens * 5
+
+
+def test_result_size_is_counted_not_just_what_was_sent(tmp_path):
+    """Truncating to probe a file's contents made every row read 500 tokens
+    and turned the ranking into turn order wearing a number."""
+    [top] = profile(load(_big(tmp_path, 10, big_at=1)), top=1)
+    assert top.tokens > 5_000
+
+
+def test_trivial_results_are_not_ranked(tmp_path):
+    rows = [_msg("assistant", [_use("t0", "Bash", {"command": "ls"})]),
+            {"message": {"role": "user", "content": [
+                {"type": "tool_result", "tool_use_id": "t0", "content": "ok"}]}}]
+    assert profile(load(_write(tmp_path, rows))) == []
+
+
+def test_repeated_opens_are_surfaced(tmp_path):
+    rows = []
+    for i in range(3):
+        rows.append(_msg("assistant", [_use(f"t{i}", "Edit",
+                                            {"file_path": "/a/same.py",
+                                             "new_string": "x"})]))
+        rows.append(_msg("user", [_res(f"t{i}")]))
+    assert repeated_reads(load(_write(tmp_path, rows))) == [("same.py", 3)]

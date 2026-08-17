@@ -37,7 +37,9 @@ class Call:
     name: str
     target: str
     ok: bool
-    attempted: str = ""
+    attempted: str = ""      # truncated: only used to probe a file's contents
+    input_chars: int = 0     # real size, before truncation
+    result_chars: int = 0    # what came BACK — usually the larger cost
 
 
 @dataclass
@@ -96,14 +98,17 @@ def load(path: Path) -> Session:
             t = b.get("type")
             if t == "tool_use":
                 inp = b.get("input") or {}
+                whole = str(inp.get("new_string") or inp.get("content") or "")
                 c = Call(b.get("name") or "?", _target(inp), True,
-                         str(inp.get("new_string") or inp.get("content") or "")[:2000])
+                         whole[:2000], input_chars=len(json.dumps(inp)))
                 pending[b.get("id")] = c
                 s.calls.append(c)
             elif t == "tool_result":
                 c = pending.get(b.get("tool_use_id"))
-                if c and b.get("is_error"):
-                    c.ok = False
+                if c:
+                    c.result_chars = len(str(b.get("content") or ""))
+                    if b.get("is_error"):
+                        c.ok = False
             elif t == "text" and (b.get("text") or "").strip():
                 if role == "assistant":
                     s.prose.append((idx, b["text"]))

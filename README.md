@@ -59,6 +59,36 @@ not on disk. Measured across 1,135 real claims, **98.0% were backed**. The
 remaining 2% is the part worth reading, and one of them had been quietly wrong
 for four weeks.
 
+## Where the context went
+
+```bash
+receipt --waste
+```
+
+```
+  what                                    tokens   at turn      carried
+  b3_baseline.png                        102,941        40   41,485,223
+  browser screenshot                      33,468       125   10,642,824
+  execution_drift.png                     24,408        35    9,958,464
+
+  opened more than once
+  llm_judge.py                                 9x
+  spec-mission-layer.md                        8x
+```
+
+**The obvious metric is the wrong one.** Ranking tool results by size misses
+that a large result costs you once when it arrives and *again on every later
+turn*, because it sits in context being re-read. A 100 KB image read at turn 40
+of 440 is far more expensive than the same image at turn 430.
+
+    carried  =  tokens  x  turns it stayed in context
+
+On the session above, one PNG read early dominates everything else in the run.
+Reading images into context is the single most expensive habit this surfaces.
+
+An estimate, not a bill: compaction drops earlier turns, and images are counted
+from encoded size rather than by dimensions.
+
 ## What it will not do
 
 **It does not invent a bill.** A Claude Code subscription is not billed per

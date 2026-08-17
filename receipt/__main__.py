@@ -13,6 +13,7 @@ from dataclasses import asdict
 from pathlib import Path
 
 from .report import build, render
+from .waste import render as render_waste
 from .session import latest, load
 
 
@@ -20,6 +21,8 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="receipt")
     ap.add_argument("--session", default=None, help="path to a transcript")
     ap.add_argument("--cwd", default=".", help="project dir to find a session for")
+    ap.add_argument("--waste", action="store_true",
+                    help="show where the context went and what it cost to carry")
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--fail-on-unbacked", action="store_true",
                     help="exit 1 if any completion claim is unbacked")
@@ -45,6 +48,8 @@ def main(argv: list[str] | None = None) -> int:
         print()
     else:
         print(render(r))
+        if a.waste:
+            print(render_waste(r.session))
     return 1 if (a.fail_on_unbacked and r.unbacked) else 0
 
 
