@@ -1,0 +1,13 @@
+[project]
+name = "agent-receipt"
+version = "0.1.0"
+description = "What did that AI coding session actually do, and what did it cost?"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.scripts]
+receipt = "receipt.__main__:main"
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
