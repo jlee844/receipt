@@ -131,6 +131,12 @@ One of them asserts the receipt never prints a dollar figure without saying a
 subscription is not billed per token — because the first version did, and a
 $222 number with no context is a charge you never received.
 
+## Why this exists
+
+[**I checked 1,135 things an AI agent said it had done**](FINDINGS.md) —
+fifteen weren't true, and five earlier attempts to catch the problem a smarter
+way all failed first.
+
 ## Status
 
 Not on PyPI yet — install from source as above. Python 3.10+.
