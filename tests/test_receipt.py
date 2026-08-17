@@ -336,3 +336,24 @@ def test_for_session_finds_a_transcript_in_any_project_dir(tmp_path, monkeypatch
     monkeypatch.setattr(S, "PROJECTS", tmp_path)
     assert S.for_session("sid-xyz").name == "sid-xyz.jsonl"
     assert S.for_session("not-there") is None
+
+
+# ── dashboard ────────────────────────────────────────────────────────────────
+
+def test_dashboard_escapes_session_text(monkeypatch):
+    """Prompts and claims are rendered into the page; unescaped they would let
+    a transcript inject markup into a page you open in your browser."""
+    from receipt.dashboard import PAGE
+    assert "esc(" in PAGE and "&lt;" in PAGE
+
+
+def test_dashboard_binds_localhost_only():
+    import inspect
+    from receipt import dashboard
+    assert '"127.0.0.1"' in inspect.getsource(dashboard.serve)
+
+
+def test_dashboard_never_prints_a_bare_dollar_figure():
+    from receipt.dashboard import PAGE
+    assert "at API list prices" in PAGE
+    assert "not billed" in PAGE

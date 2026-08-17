@@ -63,9 +63,11 @@ flags, no collisions.
 receipt --dashboard      # http://127.0.0.1:8974
 ```
 
-One page, a card per live session, refreshing every few seconds: files changed,
-test runs, failed calls, claims backed, cache share, cost, and any claim that
-needs a look. Localhost only; reads transcripts, writes nothing.
+One page, a tab per live session, refreshing every few seconds. Each tab shows
+what that session is working on (the last things you actually typed), its
+activity, every claim checked against disk with the unbacked ones quoted, the
+token split, its most-touched files, and what cost the most to carry.
+Localhost only; reads transcripts, writes nothing.
 
 It reports the **directory** and how many processes are live in it, never a pid
 per session — several Claude processes share a working directory and nothing on
@@ -146,7 +148,7 @@ Exits 1 if any completion claim in the session is unbacked.
 ## Tests
 
 ```bash
-pip install -e ".[dev]" && python -m pytest tests/ -q   # 29 tests, no network
+pip install -e ".[dev]" && python -m pytest tests/ -q   # 32 tests, no network
 ```
 
 Three are regressions for a bug an outside reviewer found in v0.1: support
