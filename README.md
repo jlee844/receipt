@@ -16,7 +16,9 @@ No dependencies. Nothing leaves your machine.
 git clone https://github.com/jlee844/receipt && cd receipt
 pip install -e .
 
-receipt                    # latest session for this directory
+receipt                    # THIS session, auto-detected
+receipt --dashboard        # live page: every running session
+receipt --live             # list running sessions
 receipt --json
 ```
 
@@ -48,6 +50,26 @@ receipt --json
     (a Claude Code subscription is not billed per token —
      this is what the same work would cost through the API)
 ```
+
+## Several sessions at once
+
+Running two agents in one directory is normal — one on the sub-project, one that
+needs the parent repo. `receipt` reads the session id Claude Code exports into
+every tool call, so it reports **the session it is running inside**, not
+whichever transcript in that directory was touched most recently. No config, no
+flags, no collisions.
+
+```bash
+receipt --dashboard      # http://127.0.0.1:8974
+```
+
+One page, a card per live session, refreshing every few seconds: files changed,
+test runs, failed calls, claims backed, cache share, cost, and any claim that
+needs a look. Localhost only; reads transcripts, writes nothing.
+
+It reports the **directory** and how many processes are live in it, never a pid
+per session — several Claude processes share a working directory and nothing on
+disk links one to a transcript, so a pid per session would be a plausible lie.
 
 ## The two lines people stop at
 
@@ -124,7 +146,7 @@ Exits 1 if any completion claim in the session is unbacked.
 ## Tests
 
 ```bash
-pip install -e ".[dev]" && python -m pytest tests/ -q   # 25 tests, no network
+pip install -e ".[dev]" && python -m pytest tests/ -q   # 29 tests, no network
 ```
 
 Three are regressions for a bug an outside reviewer found in v0.1: support

@@ -14,7 +14,7 @@ from pathlib import Path
 
 from .report import build, render
 from .waste import render as render_waste
-from .session import latest, load
+from .session import current_session_id, for_session, latest, live_sessions, load
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -23,13 +23,35 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--cwd", default=".", help="project dir to find a session for")
     ap.add_argument("--waste", action="store_true",
                     help="show where the context went and what it cost to carry")
+    ap.add_argument("--dashboard", action="store_true",
+                    help="serve a live page showing every running session")
+    ap.add_argument("--port", type=int, default=8974)
+    ap.add_argument("--live", action="store_true",
+                    help="list every running Claude Code session")
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--fail-on-unbacked", action="store_true",
                     help="exit 1 if any completion claim is unbacked")
     a = ap.parse_args(argv)
 
+    if a.dashboard:
+        from .dashboard import serve      # noqa: PLC0415
+        serve(a.port)
+        return 0
+
+    if a.live:
+        rows = live_sessions()
+        print(f"\n  {len(rows)} live session(s)\n")
+        for r in rows:
+            print(f"    pid {r['pid']:<8} {r['cwd']}")
+        print()
+        return 0
+
     if a.session:
         path, matched = Path(a.session), True
+    elif (sid := current_session_id()) and (p := for_session(sid)):
+        # Running inside a session: report on THAT session, never on whichever
+        # transcript in this directory happens to be newest.
+        path, matched = p, True
     else:
         path, matched = latest(Path(a.cwd))
     if not path or not path.exists():

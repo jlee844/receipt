@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import json
+import os
 import re
+import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -11,6 +13,46 @@ PROJECTS = Path.home() / ".claude" / "projects"
 WRITE_TOOLS = {"Write", "Edit", "NotebookEdit"}
 _TEST = re.compile(r"\b(pytest|jest|vitest|go test|cargo test|npm (run )?test|"
                    r"unittest|tox|rspec)\b|test_[\w-]+\.\w+|\btests?[/.]", re.I)
+
+
+def current_session_id() -> str | None:
+    """The session this process is running inside, if any.
+
+    Claude Code exports CLAUDE_CODE_SESSION_ID into every tool call, so an
+    agent identifies itself with no configuration and no guessing. This is what
+    makes several sessions in ONE directory unambiguous — picking the most
+    recently modified transcript silently returns whichever session typed last.
+    """
+    sid = os.environ.get("CLAUDE_CODE_SESSION_ID", "").strip()
+    return sid or None
+
+
+def for_session(sid: str) -> Path | None:
+    """The transcript for a specific session id, wherever it lives."""
+    if not PROJECTS.exists():
+        return None
+    hits = list(PROJECTS.glob(f"*/{sid}.jsonl"))
+    return hits[0] if hits else None
+
+
+def live_sessions() -> list[dict]:
+    """Every Claude Code session currently running, with its directory.
+
+    Each live session owns a socket named for its pid; the pid's cwd says which
+    project it is working in. Two sessions in the same directory are normal.
+    """
+    out = []
+    for sock in sorted(Path("/tmp/cc-socks").glob("*.sock")) if Path("/tmp/cc-socks").exists() else []:
+        pid = sock.stem
+        if not pid.isdigit():
+            continue
+        if subprocess.run(["ps", "-p", pid], capture_output=True).returncode != 0:
+            continue
+        r = subprocess.run(["lsof", "-a", "-p", pid, "-d", "cwd", "-Fn"],
+                           capture_output=True, text=True)
+        cwd = next((l[1:] for l in r.stdout.splitlines() if l.startswith("n")), "")
+        out.append({"pid": int(pid), "cwd": cwd})
+    return out
 
 
 def slug(cwd: Path) -> str:

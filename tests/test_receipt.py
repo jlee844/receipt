@@ -302,3 +302,37 @@ def test_a_matched_session_shows_no_warning(tmp_path):
     p = _write(tmp_path, [_msg("assistant", [_text("Done.")],
                                usage={"output_tokens": 10}, model="claude-opus-5")])
     assert "no session for this directory" not in render(build(load(p)))
+
+
+# ── multi-session identity ───────────────────────────────────────────────────
+
+def test_the_session_reports_itself_not_whichever_typed_last(tmp_path, monkeypatch):
+    """Two sessions in one directory is normal. Picking the newest transcript
+    silently reports the other session's work."""
+    from receipt.session import current_session_id
+    monkeypatch.setenv("CLAUDE_CODE_SESSION_ID", "abc123-def")
+    assert current_session_id() == "abc123-def"
+
+
+def test_no_session_env_means_no_claim_of_identity(monkeypatch):
+    from receipt.session import current_session_id
+    monkeypatch.delenv("CLAUDE_CODE_SESSION_ID", raising=False)
+    assert current_session_id() is None
+
+
+def test_blank_session_env_is_treated_as_absent(monkeypatch):
+    from receipt.session import current_session_id
+    monkeypatch.setenv("CLAUDE_CODE_SESSION_ID", "   ")
+    assert current_session_id() is None
+
+
+def test_for_session_finds_a_transcript_in_any_project_dir(tmp_path, monkeypatch):
+    """A session's transcript lives under a slug of its cwd; the lookup must not
+    assume which directory that is."""
+    import receipt.session as S
+    proj = tmp_path / "-some-project"
+    proj.mkdir()
+    (proj / "sid-xyz.jsonl").write_text("{}", encoding="utf-8")
+    monkeypatch.setattr(S, "PROJECTS", tmp_path)
+    assert S.for_session("sid-xyz").name == "sid-xyz.jsonl"
+    assert S.for_session("not-there") is None
