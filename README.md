@@ -2,6 +2,12 @@
 
 **What did that agent session actually do — and what did it cost?**
 
+[![tests](https://img.shields.io/badge/tests-36%20passing-0E6E68)](tests/)
+[![python](https://img.shields.io/badge/python-3.10%2B-0E6E68)](pyproject.toml)
+[![dependencies](https://img.shields.io/badge/dependencies-none-0E6E68)](pyproject.toml)
+[![license](https://img.shields.io/badge/license-MIT-666)](LICENSE)
+
+
 You finish a long session with an AI coding agent. It gives you a summary. The
 summary is written by the thing being summarised.
 
@@ -176,3 +182,18 @@ way all failed first.
 ## Status
 
 Not on PyPI yet — install from source as above. Python 3.10+.
+
+---
+
+## Part of a set
+
+Four small tools that read what an AI coding session actually did, rather than
+what it said it did. Each stands alone; together they cover a session end to
+end.
+
+| | |
+|---|---|
+| [**mission**](https://github.com/jlee844/agent-mission) | the goal, beside the work, that the agent cannot quietly rewrite — plus one live board for every running session |
+| **receipt** *(you are here)* | what a session did, what it cost, and which of its claims are backed by the filesystem |
+| [**blindspot**](https://github.com/jlee844/blindspot) | which lines in a change a test would actually catch a bug in — coverage says a line ran, not that anything asserted on it |
+| [**transcript-audit**](https://github.com/jlee844/transcript-audit) | profile a corpus of agent transcripts before computing any statistic over it |
