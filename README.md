@@ -2,8 +2,8 @@
 
 **What did that agent session actually do — and what did it cost?**
 
-[![tests](https://img.shields.io/badge/tests-36%20passing-0E6E68)](tests/)
-[![python](https://img.shields.io/badge/python-3.10%2B-0E6E68)](pyproject.toml)
+[![tests](https://github.com/jlee844/receipt/actions/workflows/tests.yml/badge.svg)](https://github.com/jlee844/receipt/actions/workflows/tests.yml)
+[![python](https://img.shields.io/badge/python-3.9%20%E2%80%93%203.14-0E6E68)](pyproject.toml)
 [![dependencies](https://img.shields.io/badge/dependencies-none-0E6E68)](pyproject.toml)
 [![license](https://img.shields.io/badge/license-MIT-666)](LICENSE)
 
@@ -162,7 +162,7 @@ Exits 1 if any completion claim in the session is unbacked.
 ## Tests
 
 ```bash
-pip install -e ".[dev]" && python -m pytest tests/ -q   # 36 tests, no network
+pip install -e ".[dev]" && python -m pytest tests/ -q   # no network
 ```
 
 Three are regressions for a bug an outside reviewer found in v0.1: support
@@ -181,7 +181,7 @@ way all failed first.
 
 ## Status
 
-Not on PyPI yet — install from source as above. Python 3.10+.
+Not on PyPI yet — install from source as above. Python 3.9 – 3.14, tested on each by CI.
 
 ---
 

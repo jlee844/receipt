@@ -396,3 +396,12 @@ def test_no_plan_recorded_is_not_an_error(tmp_path):
     from receipt.dashboard import _plan
     p = _write(tmp_path, [_msg("assistant", [_text("Done.")])])
     assert _plan(p) == {"items": [], "stale": False}
+
+
+def test_the_readme_does_not_hardcode_a_test_count():
+    """The count went stale in a sibling repo twice; the badge is CI's job now."""
+    import re
+    from pathlib import Path
+    readme = Path(__file__).resolve().parent.parent.joinpath("README.md").read_text(encoding="utf-8")
+    stale = re.findall(r"\b\d+\s*tests\b", readme)
+    assert not stale, f"hardcoded test counts in the README: {stale}"

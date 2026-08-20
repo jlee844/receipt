@@ -2,7 +2,7 @@
 name = "agent-receipt"
 version = "0.1.0"
 description = "What did that AI coding session actually do, and what did it cost?"
-requires-python = ">=3.10"
+requires-python = ">=3.9"
 dependencies = []
 
 [project.optional-dependencies]
